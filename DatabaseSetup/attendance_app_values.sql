@@ -1,8 +1,3 @@
--- Sample seed data for attendance_app
--- User enum values use the format e######, for example e0747028
--- Load order matters because of foreign key constraints:
--- users -> class/events -> studentclass/checkins
-
 USE attendance_app;
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -17,20 +12,20 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT INTO `users`
 (`userId`, `enum`, `fname`, `lname`, `email`, `password_hash`, `phoneNum`, `role`, `createdAt`)
 VALUES
-(1, 'e0747028', 'Jordan', 'Reed', 'jordan.reed@attendanceapp.edu', '$2y$10$examplehashadmin000000000000000000000000000000000000000000', '555-0101', 'admin', '2026-04-01 08:00:00'),
-(2, 'e100001', 'Maya', 'Chen', 'maya.chen@attendanceapp.edu', '$2y$10$examplehashteacher10010000000000000000000000000000000000', '555-0102', 'teacher', '2026-04-01 08:05:00'),
-(3, 'e100002', 'Daniel', 'Brooks', 'daniel.brooks@attendanceapp.edu', '$2y$10$examplehashteacher1002000000000000000000000000000000000', '555-0103', 'teacher', '2026-04-01 08:10:00'),
-(4, 'e100003', 'Alicia', 'Patel', 'alicia.patel@attendanceapp.edu', '$2y$10$examplehashteacher1003000000000000000000000000000000000', '555-0104', 'teacher', '2026-04-01 08:15:00'),
-(5, 'e200001', 'Noah', 'Williams', 'noah.williams@student.edu', '$2y$10$examplehashstudent2001000000000000000000000000000000000', '555-0201', 'student', '2026-04-02 09:00:00'),
-(6, 'e200002', 'Emma', 'Garcia', 'emma.garcia@student.edu', '$2y$10$examplehashstudent20020000000000000000000000000000000000', '555-0202', 'student', '2026-04-02 09:05:00'),
-(7, 'e200003', 'Liam', 'Smith', 'liam.smith@student.edu', '$2y$10$examplehashstudent20030000000000000000000000000000000000', '555-0203', 'student', '2026-04-02 09:10:00'),
-(8, 'e200004', 'Olivia', 'Johnson', 'olivia.johnson@student.edu', '$2y$10$examplehashstudent200400000000000000000000000000000000', '555-0204', 'student', '2026-04-02 09:15:00'),
-(9, 'e200005', 'Ethan', 'Brown', 'ethan.brown@student.edu', '$2y$10$examplehashstudent2005000000000000000000000000000000000', '555-0205', 'student', '2026-04-02 09:20:00'),
-(10, 'e200006', 'Sophia', 'Davis', 'sophia.davis@student.edu', '$2y$10$examplehashstudent200600000000000000000000000000000000', '555-0206', 'student', '2026-04-02 09:25:00'),
-(11, 'e200007', 'Mason', 'Miller', 'mason.miller@student.edu', '$2y$10$examplehashstudent200700000000000000000000000000000000', '555-0207', 'student', '2026-04-02 09:30:00'),
-(12, 'e200008', 'Ava', 'Wilson', 'ava.wilson@student.edu', '$2y$10$examplehashstudent20080000000000000000000000000000000000', '555-0208', 'student', '2026-04-02 09:35:00'),
-(13, 'e200009', 'Lucas', 'Moore', 'lucas.moore@student.edu', '$2y$10$examplehashstudent2009000000000000000000000000000000000', '555-0209', 'student', '2026-04-02 09:40:00'),
-(14, 'e200010', 'Isabella', 'Taylor', 'isabella.taylor@student.edu', '$2y$10$examplehashstudent20100000000000000000000000000000000', '555-0210', 'student', '2026-04-02 09:45:00');
+(1, 'e100000', 'Jordan', 'Reed', 'jordan.reed@365.elmhurst.edu', 'admin', '555-0101', 'admin', '2026-04-01 08:00:00'),
+(2, 'e100001', 'Maya', 'Chen', 'maya.chen@365.elmhurst.edu', 'teacher', '555-0102', 'teacher', '2026-04-01 08:05:00'),
+(3, 'e100002', 'Daniel', 'Brooks', 'daniel.brooks@365.elmhurst.edu', 'teacher', '555-0103', 'teacher', '2026-04-01 08:10:00'),
+(4, 'e100003', 'Alicia', 'Patel', 'alicia.patel@365.elmhurst.edu', 'teacher', '555-0104', 'teacher', '2026-04-01 08:15:00'),
+(5, 'e200001', 'Noah', 'Williams', 'noah.williams@365.elmhurst.edu', 'student', '555-0201', 'student', '2026-04-02 09:00:00'),
+(6, 'e200002', 'Emma', 'Garcia', 'emma.garcia@365.elmhurst.edu', 'student', '555-0202', 'student', '2026-04-02 09:05:00'),
+(7, 'e200003', 'Liam', 'Smith', 'liam.smith@365.elmhurst.edu', 'student', '555-0203', 'student', '2026-04-02 09:10:00'),
+(8, 'e200004', 'Olivia', 'Johnson', 'olivia.johnson@365.elmhurst.edu', 'student', '555-0204', 'student', '2026-04-02 09:15:00'),
+(9, 'e200005', 'Ethan', 'Brown', 'ethan.brown@365.elmhurst.edu', 'student', '555-0205', 'student', '2026-04-02 09:20:00'),
+(10, 'e200006', 'Sophia', 'Davis', 'sophia.davis@365.elmhurst.edu', 'student', '555-0206', 'student', '2026-04-02 09:25:00'),
+(11, 'e200007', 'Mason', 'Miller', 'mason.miller@365.elmhurst.edu', 'student', '555-0207', 'student', '2026-04-02 09:30:00'),
+(12, 'e200008', 'Ava', 'Wilson', 'ava.wilson@365.elmhurst.edu', 'student', '555-0208', 'student', '2026-04-02 09:35:00'),
+(13, 'e200009', 'Lucas', 'Moore', 'lucas.moore@365.elmhurst.edu', 'student', '555-0209', 'student', '2026-04-02 09:40:00'),
+(14, 'e200010', 'Isabella', 'Taylor', 'isabella.taylor@365.elmhurst.edu', 'student', '555-0210', 'student', '2026-04-02 09:45:00');
 
 -- class
 INSERT INTO `class`
