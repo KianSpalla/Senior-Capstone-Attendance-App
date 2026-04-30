@@ -1,8 +1,8 @@
-using AttendanceApp.Models;
-using AttendanceApp.Services;
+using Attendance.Api.Models;
+using Attendance.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AttendanceApp.Controllers
+namespace Attendance.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -15,66 +15,101 @@ namespace AttendanceApp.Controllers
             _userService = userService;
         }
 
-        // GET api/user
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var users = await _userService.GetAllUsersAsync();
-            return Ok(users);
+            return Ok(users.Select(ToResponse));
         }
 
-        // GET api/user/{id}
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int id)
+        [HttpGet("{enumValue}")]
+        public async Task<IActionResult> GetByEnum(string enumValue)
         {
-            var user = await _userService.GetUserByIdAsync(id);
-            return user is null ? NotFound() : Ok(user);
+            var user = await _userService.GetUserByEnumAsync(enumValue);
+            return user is null ? NotFound() : Ok(ToResponse(user));
         }
 
-        // POST api/user
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var user = await _userService.LoginAsync(request.email, request.password);
+
+            return user is null
+                ? Unauthorized("Invalid email or password.")
+                : Ok(ToResponse(user));
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
         {
             var user = new User
             {
-                Enum      = request.Enum,
-                FName     = request.FName,
-                LName     = request.LName,
-                Email     = request.Email,
-                PhoneNum  = request.PhoneNum,
-                Role      = request.Role
+                Enum = request.Enum,
+                fname = request.fname,
+                lname = request.lname,
+                email = request.email,
+                phoneNum = request.phoneNum,
+                Role = request.Role
             };
 
-            var newId = await _userService.CreateUserAsync(user, request.Password);
-            return CreatedAtAction(nameof(GetById), new { id = newId }, new { userId = newId });
+            var newEnum = await _userService.CreateUserAsync(user, request.password);
+
+            return CreatedAtAction(
+                nameof(GetByEnum),
+                new { enumValue = newEnum },
+                new { Enum = newEnum }
+            );
         }
 
-        // PUT api/user/{id}
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] User user)
+        [HttpPut("{enumValue}")]
+        public async Task<IActionResult> Update(string enumValue, [FromBody] User user)
         {
-            user.UserId = id;
+            user.Enum = enumValue;
+
             var success = await _userService.UpdateUserAsync(user);
             return success ? NoContent() : NotFound();
         }
 
-        // DELETE api/user/{id}
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("{enumValue}")]
+        public async Task<IActionResult> Delete(string enumValue)
         {
-            var success = await _userService.DeleteUserAsync(id);
+            var success = await _userService.DeleteUserAsync(enumValue);
             return success ? NoContent() : NotFound();
+        }
+
+        private static UserResponse ToResponse(User user)
+        {
+            return new UserResponse(
+                user.Enum,
+                user.fname,
+                user.lname,
+                user.email,
+                user.phoneNum,
+                user.Role,
+                user.createdAt
+            );
         }
     }
 
-    // DTO to accept plain-text password on creation
+    public record LoginRequest(string email, string password);
+
     public record CreateUserRequest(
-        string? Enum,
-        string FName,
-        string LName,
-        string Email,
-        string Password,
-        string? PhoneNum,
+        string Enum,
+        string fname,
+        string lname,
+        string email,
+        string? password,
+        string? phoneNum,
         UserRole Role
+    );
+
+    public record UserResponse(
+        string Enum,
+        string fname,
+        string lname,
+        string email,
+        string? phoneNum,
+        UserRole Role,
+        DateTime? createdAt
     );
 }

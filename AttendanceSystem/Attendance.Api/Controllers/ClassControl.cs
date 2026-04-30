@@ -1,9 +1,8 @@
-//merge student services into this controller/ get https request for both students and classes
-using AttendanceApp.Models;
-using AttendanceApp.Services;
+using Attendance.Api.Models;
+using Attendance.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AttendanceApp.Controllers
+namespace Attendance.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -16,7 +15,6 @@ namespace AttendanceApp.Controllers
             _classService = classService;
         }
 
-        // GET api/class
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -24,7 +22,6 @@ namespace AttendanceApp.Controllers
             return Ok(classes);
         }
 
-        // GET api/class/{classNo}
         [HttpGet("{classNo:int}")]
         public async Task<IActionResult> GetById(int classNo)
         {
@@ -32,32 +29,37 @@ namespace AttendanceApp.Controllers
             return cls is null ? NotFound() : Ok(cls);
         }
 
-        // GET api/class/teacher/{teacherId}
-        [HttpGet("teacher/{teacherId:int}")]
-        public async Task<IActionResult> GetByTeacher(int teacherId)
+        [HttpGet("teacher/{teacherEnum}")]
+        public async Task<IActionResult> GetByTeacher(string teacherEnum)
         {
-            var classes = await _classService.GetClassesByTeacherAsync(teacherId);
+            var classes = await _classService.GetClassesByTeacherAsync(teacherEnum);
             return Ok(classes);
         }
 
-        // POST api/class
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Class cls)
         {
-            var newId = await _classService.CreateClassAsync(cls);
-            return CreatedAtAction(nameof(GetById), new { classNo = newId }, new { classNo = newId });
+            var result = await _classService.CreateClassAsync(cls);
+
+            if (result.Status is not ClassSaveStatus.Success || result.ClassNo is null)
+                return ToClassSaveError(result.Status);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { classNo = result.ClassNo },
+                new { classNo = result.ClassNo }
+            );
         }
 
-        // PUT api/class/{classNo}
         [HttpPut("{classNo:int}")]
         public async Task<IActionResult> Update(int classNo, [FromBody] Class cls)
         {
-            cls.ClassNo = classNo;
-            var success = await _classService.UpdateClassAsync(cls);
-            return success ? NoContent() : NotFound();
+            cls.classNo = classNo;
+
+            var result = await _classService.UpdateClassAsync(cls);
+            return result.Status is ClassSaveStatus.Success ? NoContent() : ToClassSaveError(result.Status);
         }
 
-        // DELETE api/class/{classNo}
         [HttpDelete("{classNo:int}")]
         public async Task<IActionResult> Delete(int classNo)
         {
@@ -65,39 +67,73 @@ namespace AttendanceApp.Controllers
             return success ? NoContent() : NotFound();
         }
 
-        // ── StudentClass (enrollment) endpoints ──────────────────────────────
-
-        // GET api/class/{classNo}/students
         [HttpGet("{classNo:int}/students")]
         public async Task<IActionResult> GetStudents(int classNo)
         {
             var students = await _classService.GetStudentsInClassAsync(classNo);
-            return Ok(students);
+            return Ok(students.Select(ToUserResponse));
         }
 
-        // GET api/class/student/{userId}
-        [HttpGet("student/{userId:int}")]
-        public async Task<IActionResult> GetClassesForStudent(int userId)
+        [HttpGet("student/{studentEnum}")]
+        public async Task<IActionResult> GetClassesForStudent(string studentEnum)
         {
-            var classes = await _classService.GetClassesForStudentAsync(userId);
+            var classes = await _classService.GetClassesForStudentAsync(studentEnum);
             return Ok(classes);
         }
 
-        // POST api/class/{classNo}/enroll/{userId}
-        [HttpPost("{classNo:int}/enroll/{userId:int}")]
-        public async Task<IActionResult> Enroll(int classNo, int userId)
+        [HttpPost("{classNo:int}/enroll/{studentEnum}")]
+        public async Task<IActionResult> Enroll(int classNo, string studentEnum)
         {
-            var success = await _classService.EnrollStudentAsync(userId, classNo);
-            if (!success) return Conflict("Student is already enrolled or enrollment failed.");
+            var result = await _classService.EnrollStudentAsync(studentEnum, classNo);
+
+            if (result.Status is not EnrollmentStatus.Success)
+                return ToEnrollmentError(result.Status);
+
             return NoContent();
         }
 
-        // DELETE api/class/{classNo}/unenroll/{userId}
-        [HttpDelete("{classNo:int}/unenroll/{userId:int}")]
-        public async Task<IActionResult> Unenroll(int classNo, int userId)
+        [HttpDelete("{classNo:int}/unenroll/{studentEnum}")]
+        public async Task<IActionResult> Unenroll(int classNo, string studentEnum)
         {
-            var success = await _classService.UnenrollStudentAsync(userId, classNo);
+            var success = await _classService.UnenrollStudentAsync(studentEnum, classNo);
             return success ? NoContent() : NotFound();
+        }
+
+        private IActionResult ToClassSaveError(ClassSaveStatus status)
+        {
+            return status switch
+            {
+                ClassSaveStatus.NotFound => NotFound(),
+                ClassSaveStatus.TeacherNotFound => BadRequest("The class teacher does not exist."),
+                ClassSaveStatus.TeacherNotAllowed => BadRequest("Only admin or teacher users can teach classes."),
+                ClassSaveStatus.Invalid => BadRequest("Class name is required."),
+                _ => BadRequest()
+            };
+        }
+
+        private IActionResult ToEnrollmentError(EnrollmentStatus status)
+        {
+            return status switch
+            {
+                EnrollmentStatus.ClassNotFound => NotFound("Class not found."),
+                EnrollmentStatus.UserNotFound => NotFound("User not found."),
+                EnrollmentStatus.UserNotStudent => BadRequest("Only student users can be enrolled in classes."),
+                EnrollmentStatus.AlreadyEnrolled => Conflict("Student is already enrolled in this class."),
+                _ => BadRequest()
+            };
+        }
+
+        private static UserResponse ToUserResponse(User user)
+        {
+            return new UserResponse(
+                user.Enum,
+                user.fname,
+                user.lname,
+                user.email,
+                user.phoneNum,
+                user.Role,
+                user.createdAt
+            );
         }
     }
 }

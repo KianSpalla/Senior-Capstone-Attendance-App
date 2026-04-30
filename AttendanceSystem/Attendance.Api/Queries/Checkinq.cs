@@ -1,55 +1,88 @@
-using AttendanceApp.Models;
+using Attendance.Api.Data;
+using Attendance.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace AttendanceApp.Repositories
+namespace Attendance.Api.Queries;
+
+public interface ICheckinRepository
 {
-    public interface ICheckInRepository
+    Task<IEnumerable<Checkin>> GetByEventAsync(int eventId);
+    Task<IEnumerable<Checkin>> GetByUserAsync(string enumValue);
+    Task<Checkin?> GetAsync(int eventId, string enumValue);
+    Task<int> GetCheckinCountAsync(int eventId);
+    Task<int> CreateAsync(Checkin checkin);
+    Task<bool> DeleteAsync(int checkInId);
+    Task<bool> DeleteByEventAndUserAsync(int eventId, string enumValue);
+}
+
+public class CheckinRepository : ICheckinRepository
+{
+    private readonly AttendanceDbContext _db;
+
+    public CheckinRepository(AttendanceDbContext db)
     {
-        Task<IEnumerable<CheckIn>> GetByEventAsync(int eventId);
-        Task<IEnumerable<CheckIn>> GetByUserAsync(int userId);
-        Task<CheckIn?> GetAsync(int eventId, int userId);
-        Task<int> GetCheckInCountAsync(int eventId);
-        Task<int> CreateAsync(CheckIn checkIn);    // returns new checkInId
-        Task<bool> DeleteAsync(int checkInId);
-        Task<bool> DeleteByEventAndUserAsync(int eventId, int userId);
+        _db = db;
     }
 
-    public class CheckInRepository : ICheckInRepository
+    public async Task<IEnumerable<Checkin>> GetByEventAsync(int eventId)
     {
-        // create a constructor that takes in AppDbContext and assigns it to a private readonly field _db
+        return await _db.Checkins
+            .AsNoTracking()
+            .Include(c => c.User)
+            .Where(c => c.eventId == eventId)
+            .ToListAsync();
+    }
 
-        public Task<IEnumerable<CheckIn>> GetByEventAsync(int eventId)
-        {
-            throw new NotImplementedException();
-        }
+    public async Task<IEnumerable<Checkin>> GetByUserAsync(string enumValue)
+    {
+        return await _db.Checkins
+            .AsNoTracking()
+            .Include(c => c.Event)
+            .Where(c => c.Enum == enumValue)
+            .ToListAsync();
+    }
 
-        public Task<IEnumerable<CheckIn>> GetByUserAsync(int userId)
-        {
-            throw new NotImplementedException();
-        }
+    public async Task<Checkin?> GetAsync(int eventId, string enumValue)
+    {
+        return await _db.Checkins
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.eventId == eventId && c.Enum == enumValue);
+    }
 
-        public Task<CheckIn?> GetAsync(int eventId, int userId)
-        {
-            throw new NotImplementedException();
-        }
+    public async Task<int> GetCheckinCountAsync(int eventId)
+    {
+        return await _db.Checkins
+            .CountAsync(c => c.eventId == eventId);
+    }
 
-        public Task<int> GetCheckInCountAsync(int eventId)
-        {
-            throw new NotImplementedException();
-        }
+    public async Task<int> CreateAsync(Checkin checkin)
+    {
+        _db.Checkins.Add(checkin);
+        await _db.SaveChangesAsync();
+        return checkin.checkInId;
+    }
 
-        public Task<int> CreateAsync(CheckIn checkIn)
-        {
-            throw new NotImplementedException();
-        }
+    public async Task<bool> DeleteAsync(int checkInId)
+    {
+        var checkin = await _db.Checkins.FindAsync(checkInId);
 
-        public Task<bool> DeleteAsync(int checkInId)
-        {
-            throw new NotImplementedException();
-        }
+        if (checkin is null)
+            return false;
 
-        public Task<bool> DeleteByEventAndUserAsync(int eventId, int userId)
-        {
-            throw new NotImplementedException();
-        }
+        _db.Checkins.Remove(checkin);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteByEventAndUserAsync(int eventId, string enumValue)
+    {
+        var checkin = await GetAsync(eventId, enumValue);
+
+        if (checkin is null)
+            return false;
+
+        _db.Checkins.Remove(checkin);
+        await _db.SaveChangesAsync();
+        return true;
     }
 }
