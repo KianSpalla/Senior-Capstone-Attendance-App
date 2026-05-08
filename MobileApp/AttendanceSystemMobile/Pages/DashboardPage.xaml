@@ -4,8 +4,6 @@
              x:Class="AttendanceSystemMobile.Pages.DashboardPage"
              Title="">
 
-
-
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Logout"
                      Order="Primary"
@@ -13,10 +11,14 @@
                      Clicked="OnLogoutClicked"/>
     </ContentPage.ToolbarItems>
 
-    <ScrollView>
+    <!-- RefreshView enables pull-to-refresh -->
+    <RefreshView x:Name="RefreshViewControl"
+                 Refreshing="OnRefreshing"
+                 RefreshColor="#2196F3">
+        
+        <ScrollView>
             <VerticalStackLayout Padding="20" Spacing="15">
 
-           
                 <Border BackgroundColor="#f2f2f2" Padding="15">
                     <VerticalStackLayout>
                         <Label x:Name="NameLabel" FontSize="20" FontAttributes="Bold"/>
@@ -24,29 +26,21 @@
                     </VerticalStackLayout>
                 </Border>
 
-              <!--  <Border BackgroundColor="#dff0d8" Padding="15">
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="10">
+
+                    <GraphicsView x:Name="ProgressCircle"
+                                  HeightRequest="120"
+                                  WidthRequest="120" />
+
                     <Label x:Name="AttendanceLabel"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <Label Text="Upcoming Events"
                        FontSize="18"
                        FontAttributes="Bold"/>
-                </Border> -->
-
-            <VerticalStackLayout HorizontalOptions="Center" Spacing="10">
-
-                <GraphicsView x:Name="ProgressCircle"
-                  HeightRequest="120"
-                  WidthRequest="120" />
-
-                <Label x:Name="AttendanceLabel"
-           FontSize="18"
-           FontAttributes="Bold"
-           HorizontalOptions="Center"/>
-            </VerticalStackLayout>
-
-
-
-            <Label Text="Upcoming Events"
-                   FontSize="18"
-                   FontAttributes="Bold"/>
 
                 <CollectionView x:Name="EventsList">
                     <CollectionView.ItemTemplate>
@@ -64,5 +58,7 @@
 
             </VerticalStackLayout>
         </ScrollView>
+        
+    </RefreshView>
 
-    </ContentPage>
+</ContentPage>

@@ -26,10 +26,11 @@ namespace AttendanceSystemMobile
              builder.Services.AddDbContext<Data.AppDbContext>(options =>
                 options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
 
-            builder.Services.AddTransient<DatabaseService>();
+            builder.Services.AddScoped<DatabaseService>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<DashboardPage>();
             builder.Services.AddTransient<ScannerPage>();
+            builder.Services.AddTransient<InitializePasswordPage>();
 
 #if DEBUG
             builder.Logging.AddDebug();
