@@ -1,65 +1,115 @@
-using AttendanceApp.Models;
-using AttendanceApp.Repositories;
+using Attendance.Api.Models;
+using Attendance.Api.Queries;
 
-namespace AttendanceApp.Services
+namespace Attendance.Api.Services;
+
+public interface ICheckInService
 {
-    public interface ICheckInService
+    Task<IEnumerable<Checkin>> GetCheckInsForEventAsync(int eventId);
+    Task<IEnumerable<Checkin>> GetCheckInsForUserAsync(string enumValue);
+    Task<int> GetCheckInCountAsync(int eventId);
+    Task<CheckInResult> CheckInAsync(int eventId, string enumValue);
+    Task<CheckInResult> CheckInByEventCodeAsync(string eventCode, string enumValue);
+    Task<bool> RemoveCheckInAsync(int checkInId);
+}
+
+public class CheckInService : ICheckInService
+{
+    private readonly ICheckinRepository _repo;
+    private readonly IEventRepository _eventRepo;
+    private readonly IUserRepository _userRepo;
+
+    public CheckInService(ICheckinRepository repo, IEventRepository eventRepo, IUserRepository userRepo)
     {
-        Task<IEnumerable<CheckIn>> GetCheckInsForEventAsync(int eventId);
-        Task<IEnumerable<CheckIn>> GetCheckInsForUserAsync(int userId);
-        Task<int> GetCheckInCountAsync(int eventId);
-        /// <summary>Check a user into an event. Returns the new checkInId, or -1 if already checked in / at capacity.</summary>
-        Task<int> CheckInAsync(int eventId, int userId);
-        Task<bool> RemoveCheckInAsync(int checkInId);
+        _repo = repo;
+        _eventRepo = eventRepo;
+        _userRepo = userRepo;
     }
 
-    public class CheckInService : ICheckInService
+    public async Task<IEnumerable<Checkin>> GetCheckInsForEventAsync(int eventId)
     {
-        private readonly ICheckInRepository _checkInRepo;
-        private readonly IEventRepository _eventRepo;
+        return await _repo.GetByEventAsync(eventId);
+    }
 
-        public CheckInService(ICheckInRepository checkInRepo, IEventRepository eventRepo)
+    public async Task<IEnumerable<Checkin>> GetCheckInsForUserAsync(string enumValue)
+    {
+        return await _repo.GetByUserAsync(enumValue);
+    }
+
+    public async Task<int> GetCheckInCountAsync(int eventId)
+    {
+        return await _repo.GetCheckinCountAsync(eventId);
+    }
+
+    public async Task<CheckInResult> CheckInAsync(int eventId, string enumValue)
+    {
+        var evt = await _eventRepo.GetByIdAsync(eventId);
+
+        if (evt is null)
+            return new CheckInResult(CheckInStatus.EventNotFound);
+
+        return await CheckInForEventAsync(evt, enumValue);
+    }
+
+    public async Task<CheckInResult> CheckInByEventCodeAsync(string eventCode, string enumValue)
+    {
+        var evt = await _eventRepo.GetByCodeAsync(eventCode.Trim().ToUpperInvariant());
+
+        if (evt is null)
+            return new CheckInResult(CheckInStatus.EventNotFound);
+
+        return await CheckInForEventAsync(evt, enumValue);
+    }
+
+    public async Task<bool> RemoveCheckInAsync(int checkInId)
+    {
+        return await _repo.DeleteAsync(checkInId);
+    }
+
+    private async Task<CheckInResult> CheckInForEventAsync(Event evt, string enumValue)
+    {
+        enumValue = enumValue.Trim().ToLowerInvariant();
+        var user = await _userRepo.GetByEnumAsync(enumValue);
+
+        if (user is null)
+            return new CheckInResult(CheckInStatus.UserNotFound);
+
+        if (user.Role is not UserRole.student)
+            return new CheckInResult(CheckInStatus.UserNotAllowed);
+
+        var existing = await _repo.GetAsync(evt.eventId, enumValue);
+
+        if (existing is not null)
+            return new CheckInResult(CheckInStatus.AlreadyCheckedIn, existing.checkInId);
+
+        if (evt.capacity is not null)
         {
-            _checkInRepo = checkInRepo;
-            _eventRepo = eventRepo;
+            var count = await _repo.GetCheckinCountAsync(evt.eventId);
+
+            if (count >= evt.capacity)
+                return new CheckInResult(CheckInStatus.EventAtCapacity);
         }
 
-        public async Task<IEnumerable<CheckIn>> GetCheckInsForEventAsync(int eventId)
+        var checkin = new Checkin
         {
-            return await _checkInRepo.GetByEventAsync(eventId);
-        }
+            eventId = evt.eventId,
+            Enum = enumValue,
+            checkedInAt = DateTime.UtcNow
+        };
 
-        public async Task<IEnumerable<CheckIn>> GetCheckInsForUserAsync(int userId)
-        {
-            return await _checkInRepo.GetByUserAsync(userId);
-        }
-
-        public async Task<int> GetCheckInCountAsync(int eventId)
-        {
-            return await _checkInRepo.GetCheckInCountAsync(eventId);
-        }
-
-        public async Task<int> CheckInAsync(int eventId, int userId)
-        {
-            // Duplicate check — DB also enforces unique(eventId, userId)
-            var existing = await _checkInRepo.GetAsync(eventId, userId);
-            if (existing != null) return -1;
-
-            // Capacity check
-            var evt = await _eventRepo.GetByIdAsync(eventId);
-            if (evt?.Capacity != null)
-            {
-                var count = await _checkInRepo.GetCheckInCountAsync(eventId);
-                if (count >= evt.Capacity) return -1;
-            }
-
-            var checkIn = new CheckIn { EventId = eventId, UserId = userId };
-            return await _checkInRepo.CreateAsync(checkIn);
-        }
-
-        public async Task<bool> RemoveCheckInAsync(int checkInId)
-        {
-            return await _checkInRepo.DeleteAsync(checkInId);
-        }
+        var checkInId = await _repo.CreateAsync(checkin);
+        return new CheckInResult(CheckInStatus.Success, checkInId);
     }
 }
+
+public enum CheckInStatus
+{
+    Success,
+    EventNotFound,
+    UserNotFound,
+    UserNotAllowed,
+    AlreadyCheckedIn,
+    EventAtCapacity
+}
+
+public record CheckInResult(CheckInStatus Status, int? CheckInId = null);

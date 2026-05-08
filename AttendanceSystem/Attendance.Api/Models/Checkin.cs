@@ -1,15 +1,12 @@
-using System;
-namespace Attendance.Api.Models
-{
-    public class Checkin
-    {
-        public int checkinId { get; set; }
-        public int eventId { get; set; } //foreign key to Event event.eventId
-        public int userId { get; set; } // foreign key to User user.userId
-        public DateTime checkinTime { get; set; }
+namespace Attendance.Api.Models;
 
-        //navigation properties to Event and User
-        public Event? Event { get; set; }
-        public User? User { get; set; }
-    }
+public class Checkin
+{
+    public int checkInId { get; set; }
+    public int eventId { get; set; }
+    public string Enum { get; set; } = string.Empty;
+    public DateTime? checkedInAt { get; set; }
+
+    public Event? Event { get; set; }
+    public User? User { get; set; }
 }

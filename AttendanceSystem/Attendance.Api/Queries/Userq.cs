@@ -1,57 +1,87 @@
-using AttendanceApp.Models;
+using Attendance.Api.Data;
+using Attendance.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace AttendanceApp.Repositories
+namespace Attendance.Api.Queries;
+
+public interface IUserRepository
 {
-    public interface IUserRepository
+    Task<IEnumerable<User>> GetAllAsync();
+    Task<User?> GetByEnumAsync(string enumValue);
+    Task<User?> GetByEmailAsync(string email);
+    Task<string> CreateAsync(User user);
+    Task<bool> UpdateAsync(User user);
+    Task<bool> DeleteAsync(string enumValue);
+}
+
+public class UserRepository : IUserRepository
+{
+    private readonly AttendanceDbContext _db;
+
+    public UserRepository(AttendanceDbContext db)
     {
-        Task<IEnumerable<User>> GetAllAsync();
-        Task<User?> GetByIdAsync(int userId);
-        Task<User?> GetByEmailAsync(string email);
-        Task<User?> GetByEnumAsync(string enumValue);
-        Task<int> CreateAsync(User user);           // returns new userId
-        Task<bool> UpdateAsync(User user);
-        Task<bool> DeleteAsync(int userId);
+        _db = db;
     }
 
-    public class UserRepository : IUserRepository
+    public async Task<IEnumerable<User>> GetAllAsync()
     {
-        // create a constructor that takes in AppDbContext and assigns it to a private readonly field _db
-        // private readonly AppDbContext _db; 
-        // public UserRepository(AppDbContext db) { _db = db; } 
+        return await _db.Users
+            .AsNoTracking()
+            .ToListAsync();
+    }
 
-        public Task<IEnumerable<User>> GetAllAsync()
+    public async Task<User?> GetByEnumAsync(string enumValue)
+    {
+        return await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Enum == enumValue);
+    }
+
+    public async Task<User?> GetByEmailAsync(string email)
+    {
+        return await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.email == email);
+    }
+
+    public async Task<string> CreateAsync(User user)
+    {
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+        return user.Enum;
+    }
+
+    public async Task<bool> UpdateAsync(User user)
+    {
+        var existingUser = await _db.Users.FindAsync(user.Enum);
+
+        if (existingUser is null)
+            return false;
+
+        existingUser.fname = user.fname;
+        existingUser.lname = user.lname;
+        existingUser.email = user.email;
+        if (!string.IsNullOrWhiteSpace(user.password))
         {
-            throw new NotImplementedException();
+            existingUser.password = user.password;
         }
 
-        public Task<User?> GetByIdAsync(int userId)
-        {
-            throw new NotImplementedException();
-        }
+        existingUser.phoneNum = user.phoneNum;
+        existingUser.Role = user.Role;
 
-        public Task<User?> GetByEmailAsync(string email)
-        {
-            throw new NotImplementedException();
-        }
+        await _db.SaveChangesAsync();
+        return true;
+    }
 
-        public Task<User?> GetByEnumAsync(string enumValue)
-        {
-            throw new NotImplementedException();
-        }
+    public async Task<bool> DeleteAsync(string enumValue)
+    {
+        var user = await _db.Users.FindAsync(enumValue);
 
-        public Task<int> CreateAsync(User user)
-        {
-            throw new NotImplementedException();
-        }
+        if (user is null)
+            return false;
 
-        public Task<bool> UpdateAsync(User user)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> DeleteAsync(int userId)
-        {
-            throw new NotImplementedException();
-        }
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+        return true;
     }
 }

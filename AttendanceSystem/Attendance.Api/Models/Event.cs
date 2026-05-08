@@ -1,18 +1,17 @@
-using System;
-namespace Attendance.Api.Models
-{
-    public class Events {
-        public int eventId { get; set; }
-        public string eventCode { get; set; }
-        public string eventName { get; set; }
-        public DateTime EventTime { get; set; }    
-        public Location EventLocation { get; set; }
-        public int? Capacity { get; set; }
-        public int Host { get; set; } //foreign key to users table
-        public string? Description { get; set; }    
-        public DateTime createdAt { get; set; }
+namespace Attendance.Api.Models;
 
-        // Navigation properties to get the host user details
-        public User? HostUser { get; set; }
-    }
+public class Event
+{
+    public int eventId { get; set; }
+    public string eventCode { get; set; } = string.Empty;
+    public string eventName { get; set; } = string.Empty;
+    public DateTime eventTime { get; set; }
+    public string? eventLocation { get; set; }
+    public int? capacity { get; set; }
+    public string host { get; set; } = string.Empty;
+    public string? description { get; set; }
+    public DateTime? createdAt { get; set; }
+
+    public User? HostUser { get; set; }
+    public ICollection<Checkin> Checkins { get; set; } = new List<Checkin>();
 }

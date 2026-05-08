@@ -1,28 +1,26 @@
-using AttendanceApp.Services;
+using Attendance.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AttendanceApp.Controllers
+namespace Attendance.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CheckInController : ControllerBase
+    public class CheckinController : ControllerBase
     {
         private readonly ICheckInService _checkInService;
 
-        public CheckInController(ICheckInService checkInService)
+        public CheckinController(ICheckInService checkInService)
         {
             _checkInService = checkInService;
         }
 
-        // GET api/checkin/event/{eventId}
         [HttpGet("event/{eventId:int}")]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
-            var checkIns = await _checkInService.GetCheckInsForEventAsync(eventId);
-            return Ok(checkIns);
+            var checkins = await _checkInService.GetCheckInsForEventAsync(eventId);
+            return Ok(checkins);
         }
 
-        // GET api/checkin/event/{eventId}/count
         [HttpGet("event/{eventId:int}/count")]
         public async Task<IActionResult> GetCount(int eventId)
         {
@@ -30,32 +28,57 @@ namespace AttendanceApp.Controllers
             return Ok(new { eventId, count });
         }
 
-        // GET api/checkin/user/{userId}
-        [HttpGet("user/{userId:int}")]
-        public async Task<IActionResult> GetByUser(int userId)
+        [HttpGet("user/{studentEnum}")]
+        public async Task<IActionResult> GetByUser(string studentEnum)
         {
-            var checkIns = await _checkInService.GetCheckInsForUserAsync(userId);
-            return Ok(checkIns);
+            var checkins = await _checkInService.GetCheckInsForUserAsync(studentEnum);
+            return Ok(checkins);
         }
 
-        // POST api/checkin
         [HttpPost]
-        public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
+        public async Task<IActionResult> CheckIn([FromBody] CheckinRequest request)
         {
-            var newId = await _checkInService.CheckInAsync(request.EventId, request.UserId);
-            if (newId == -1)
-                return Conflict("Already checked in or event is at capacity.");
-            return CreatedAtAction(null, new { checkInId = newId });
+            var result = await _checkInService.CheckInAsync(request.eventId, request.Enum);
+
+            if (result.Status is not CheckInStatus.Success || result.CheckInId is null)
+                return ToCheckInError(result.Status);
+
+            return Created("", new { checkInId = result.CheckInId });
         }
 
-        // DELETE api/checkin/{checkInId}
+        [HttpPost("code/{eventCode}")]
+        public async Task<IActionResult> CheckInByEventCode(string eventCode, [FromBody] CheckinByCodeRequest request)
+        {
+            var result = await _checkInService.CheckInByEventCodeAsync(eventCode, request.Enum);
+
+            if (result.Status is not CheckInStatus.Success || result.CheckInId is null)
+                return ToCheckInError(result.Status);
+
+            return Created("", new { checkInId = result.CheckInId });
+        }
+
         [HttpDelete("{checkInId:int}")]
         public async Task<IActionResult> Delete(int checkInId)
         {
             var success = await _checkInService.RemoveCheckInAsync(checkInId);
             return success ? NoContent() : NotFound();
         }
+
+        private IActionResult ToCheckInError(CheckInStatus status)
+        {
+            return status switch
+            {
+                CheckInStatus.EventNotFound => NotFound("Event not found."),
+                CheckInStatus.UserNotFound => NotFound("User not found."),
+                CheckInStatus.UserNotAllowed => BadRequest("Only student users can check in to events."),
+                CheckInStatus.AlreadyCheckedIn => Conflict("Student is already checked in for this event."),
+                CheckInStatus.EventAtCapacity => Conflict("Event is at capacity."),
+                _ => BadRequest()
+            };
+        }
     }
 
-    public record CheckInRequest(int EventId, int UserId);
+    public record CheckinRequest(int eventId, string Enum);
+
+    public record CheckinByCodeRequest(string Enum);
 }
