@@ -6,6 +6,7 @@ using ZXing.Net.Maui.Controls;
 using AttendanceSystemMobile.Pages;
 
 
+
 namespace AttendanceSystemMobile
 {
     public static class MauiProgram
@@ -25,6 +26,7 @@ namespace AttendanceSystemMobile
             var connectionString = Data.DatabaseConfig.GetConnectionString();
              builder.Services.AddDbContext<Data.AppDbContext>(options =>
                 options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+            
 
             builder.Services.AddScoped<DatabaseService>();
             builder.Services.AddTransient<LoginPage>();

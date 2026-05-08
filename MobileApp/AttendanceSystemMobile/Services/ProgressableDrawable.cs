@@ -14,32 +14,48 @@ namespace AttendanceSystemMobile.Services
 
         public void Draw(ICanvas canvas, RectF dirtyRect)
         {
+            canvas.Antialias = true;
+
             float stroke = 15;
-            float radius = Math.Min(dirtyRect.Width, dirtyRect.Height) / 2 - stroke;
 
-            PointF center = new(dirtyRect.Center.X, dirtyRect.Center.Y);
+            float radius =
+                Math.Min(dirtyRect.Width, dirtyRect.Height) / 2 - stroke;
 
-            // background
+            PointF center =
+                new(dirtyRect.Center.X, dirtyRect.Center.Y);
+
+            // Background
             canvas.StrokeColor = Colors.LightGray;
             canvas.StrokeSize = stroke;
+
             canvas.DrawCircle(center, radius);
 
-            if (_progress <= 0) return;
-
-            // progress arc
+            if (_progress <= 0)
+                return;
+            // Progress
             canvas.StrokeColor = Colors.Green;
+            canvas.StrokeSize = stroke;
+            canvas.StrokeLineCap = LineCap.Round;
 
-            float sweepAngle = 360f * _progress;
+            if (_progress >= 1f)
+            {
+                // Full circle
+                canvas.DrawCircle(center, radius);
+            }
+            else
+            {
+                float endAngle = -90 + (360f * _progress);
 
-            canvas.DrawArc(
-                dirtyRect.Center.X - radius,
-                dirtyRect.Center.Y - radius,
-                radius * 2,
-                radius * 2,
-                -90,
-                sweepAngle,
-                false,
-                false);
+                canvas.DrawArc(
+                    center.X - radius,
+                    center.Y - radius,
+                    radius * 2,
+                    radius * 2,
+                    -90,
+                    endAngle,
+                    false,
+                    false);
+            }
         }
     }
 }
