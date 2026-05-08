@@ -1,10 +1,267 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Event Manager";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="app-shell">
+    <div class="toolbar">
+        <div>
+            <h1>Event Manager</h1>
+            <p>Teacher/admin web console for creating, editing, and deleting attendance events.</p>
+        </div>
+    </div>
+
+    <div class="work-grid">
+        <section class="panel">
+            <div class="panel-header">
+                <h2 id="formTitle">Add Event</h2>
+                <button type="button" onclick="resetEventForm()">New Event</button>
+            </div>
+            <form id="eventForm">
+                <input id="eventId" type="hidden" />
+                <input id="eventName" placeholder="Event name" required />
+                <input id="eventTime" type="datetime-local" required />
+                <input id="eventLocation" placeholder="Location" />
+                <input id="eventCapacity" type="number" min="1" placeholder="Capacity" />
+                <select id="eventHost" required>
+                    <option value="">Loading teachers/admins...</option>
+                </select>
+                <textarea id="eventDescription" placeholder="Description"></textarea>
+                <button type="submit">Save Event</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Events</h2>
+                <button type="button" onclick="loadEvents()">Refresh</button>
+            </div>
+            <div id="eventCount" class="status">0 events loaded.</div>
+            <div id="eventsTable" class="table-wrap"></div>
+        </section>
+    </div>
+
+    <div id="status" class="status">Ready.</div>
+</section>
+
+@section Scripts {
+    <script>
+        const eventForm = document.getElementById("eventForm");
+        const eventsTable = document.getElementById("eventsTable");
+        const statusBox = document.getElementById("status");
+        let events = [];
+        let hosts = [];
+
+        eventForm.addEventListener("submit", saveEvent);
+
+        function apiBase() {
+            return window.location.protocol === "https:"
+                ? "https://localhost:7027/api"
+                : "http://localhost:5214/api";
+        }
+
+        async function request(path, options = {}) {
+            let response;
+
+            try {
+                response = await fetch(`${apiBase()}${path}`, {
+                    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+                    ...options
+                });
+            } catch {
+                throw new Error(`Could not reach ${apiBase()}. Make sure the API is running and that the Web page and API are both using http or both using https.`);
+            }
+            const text = await response.text();
+            const contentType = response.headers.get("content-type") ?? "";
+            const data = text && contentType.includes("application/json")
+                ? JSON.parse(text)
+                : text;
+
+            if (!response.ok) {
+                throw new Error(typeof data === "string" ? data : JSON.stringify(data ?? response.statusText));
+            }
+
+            return data;
+        }
+
+        function setStatus(message) {
+            statusBox.textContent = message;
+        }
+
+        async function saveEvent(event) {
+            event.preventDefault();
+
+            if (!document.getElementById("eventHost").value) {
+                setStatus("Choose a teacher/admin host before saving.");
+                return;
+            }
+
+            const eventId = document.getElementById("eventId").value;
+            const payload = {
+                eventCode: "",
+                eventName: document.getElementById("eventName").value.trim(),
+                eventTime: document.getElementById("eventTime").value,
+                eventLocation: document.getElementById("eventLocation").value.trim(),
+                capacity: Number(document.getElementById("eventCapacity").value) || null,
+                host: document.getElementById("eventHost").value,
+                description: document.getElementById("eventDescription").value.trim()
+            };
+
+            try {
+                setStatus(eventId ? "Updating event..." : "Adding event and generating hidden QR code...");
+                const saved = await request(eventId ? `/Event/${eventId}` : "/Event", {
+                    method: eventId ? "PUT" : "POST",
+                    body: JSON.stringify(payload)
+                });
+
+                const highlightedEventId = saved?.eventId ?? Number(eventId);
+                resetEventForm();
+                await loadEvents(highlightedEventId);
+                setStatus(eventId ? "Event updated." : `Event ${saved.eventCode} added. Unique QR code was generated in the backend.`);
+            } catch (error) {
+                setStatus(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function loadEvents(highlightId = null) {
+            try {
+                events = await request("/Event");
+                document.getElementById("eventCount").textContent = `${events.length} events loaded.`;
+                renderEvents(highlightId);
+            } catch (error) {
+                eventsTable.innerHTML = `<div class="empty">Could not load events.</div>`;
+                setStatus(`Load failed: ${error.message}`);
+            }
+        }
+
+        async function loadHosts() {
+            try {
+                const users = await request("/User");
+                hosts = users.filter(user => user.role === "admin" || user.role === "teacher");
+                const hostSelect = document.getElementById("eventHost");
+
+                if (!hosts.length) {
+                    hostSelect.innerHTML = `<option value="">No teacher/admin users found</option>`;
+                    setStatus("No teacher/admin users were found. Load the database seed script before adding events.");
+                    return;
+                }
+
+                hostSelect.innerHTML = `
+                    <option value="">Choose teacher/admin host</option>
+                    ${hosts.map(user => `
+                        <option value="${escapeHtml(user.enum)}">
+                            ${escapeHtml(user.enum)} - ${escapeHtml(user.fname)} ${escapeHtml(user.lname)} (${escapeHtml(user.role)})
+                        </option>
+                    `).join("")}`;
+            } catch (error) {
+                document.getElementById("eventHost").innerHTML = `<option value="">Could not load hosts</option>`;
+                setStatus(`Could not load teacher/admin users: ${error.message}`);
+            }
+        }
+
+        function renderEvents(highlightId) {
+            if (!events.length) {
+                eventsTable.innerHTML = `<div class="empty">No events yet.</div>`;
+                return;
+            }
+
+            eventsTable.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Actions</th>
+                            <th>Code</th>
+                            <th>Event</th>
+                            <th>Time</th>
+                            <th>Location</th>
+                            <th>Host</th>
+                            <th>Capacity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${events
+                            .sort((a, b) => new Date(b.eventTime) - new Date(a.eventTime))
+                            .map(evt => `
+                                <tr class="${evt.eventId === highlightId ? "highlight" : ""}">
+                                    <td class="actions">
+                                        <button type="button" onclick="editEvent(${evt.eventId})">Edit</button>
+                                        <button type="button" class="danger" onclick="deleteEvent(${evt.eventId})">Delete</button>
+                                    </td>
+                                    <td>${escapeHtml(evt.eventCode)}</td>
+                                    <td>${escapeHtml(evt.eventName)}</td>
+                                    <td>${escapeHtml(new Date(evt.eventTime).toLocaleString())}</td>
+                                    <td>${escapeHtml(evt.eventLocation ?? "")}</td>
+                                    <td>${escapeHtml(evt.host)}</td>
+                                    <td>${escapeHtml(evt.capacity ?? "")}</td>
+                                </tr>
+                            `).join("")}
+                    </tbody>
+                </table>`;
+        }
+
+        function editEvent(eventId) {
+            const evt = events.find(item => item.eventId === eventId);
+
+            if (!evt) {
+                setStatus("Event not found.");
+                return;
+            }
+
+            document.getElementById("formTitle").textContent = "Edit Event";
+            document.getElementById("eventId").value = evt.eventId;
+            document.getElementById("eventName").value = evt.eventName;
+            document.getElementById("eventTime").value = toDateTimeLocal(evt.eventTime);
+            document.getElementById("eventLocation").value = evt.eventLocation ?? "";
+            document.getElementById("eventCapacity").value = evt.capacity ?? "";
+            document.getElementById("eventHost").value = evt.host;
+            document.getElementById("eventDescription").value = evt.description ?? "";
+            setStatus(`Editing ${evt.eventCode}.`);
+            document.getElementById("eventName").focus();
+        }
+
+        async function deleteEvent(eventId) {
+            const evt = events.find(item => item.eventId === eventId);
+            const label = evt ? evt.eventCode : `event ${eventId}`;
+
+            if (!confirm(`Delete ${label}?`)) {
+                return;
+            }
+
+            try {
+                setStatus(`Deleting ${label}...`);
+                await request(`/Event/${eventId}`, { method: "DELETE" });
+                resetEventForm();
+                await loadEvents();
+                setStatus(`${label} deleted.`);
+            } catch (error) {
+                setStatus(`Delete failed: ${error.message}`);
+            }
+        }
+
+        function resetEventForm() {
+            eventForm.reset();
+            document.getElementById("eventId").value = "";
+            document.getElementById("formTitle").textContent = "Add Event";
+        }
+
+        function toDateTimeLocal(value) {
+            const date = new Date(value);
+            date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+            return date.toISOString().slice(0, 16);
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;"
+            }[char]));
+        }
+
+        loadHosts();
+        loadEvents();
+    </script>
+}
