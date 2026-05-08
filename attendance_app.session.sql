@@ -1,0 +1,162 @@
+CREATE DATABASE IF NOT EXISTS `attendance_app`;
+USE `attendance_app`;
+
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
+
+DROP TABLE IF EXISTS `checkins`;
+DROP TABLE IF EXISTS `studentclass`;
+DROP TABLE IF EXISTS `events`;
+DROP TABLE IF EXISTS `class`;
+DROP TABLE IF EXISTS `users`;
+
+CREATE TABLE `users` (
+  `enum` varchar(7) NOT NULL,
+  `fname` varchar(100) NOT NULL,
+  `lname` varchar(100) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `phoneNum` varchar(20) DEFAULT NULL,
+  `role` enum('admin','teacher','student') NOT NULL,
+  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`enum`),
+  UNIQUE KEY `email` (`email`),
+  CONSTRAINT `chk_users_enum_format` CHECK (`enum` REGEXP '^e[0-9]{6}$')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `class` (
+  `classNo` int NOT NULL AUTO_INCREMENT,
+  `className` varchar(150) NOT NULL,
+  `teacher` varchar(7) NOT NULL,
+  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`classNo`),
+  KEY `teacher` (`teacher`),
+  CONSTRAINT `class_ibfk_1` FOREIGN KEY (`teacher`) REFERENCES `users` (`enum`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `events` (
+  `eventId` int NOT NULL AUTO_INCREMENT,
+  `eventCode` varchar(100) NOT NULL,
+  `eventName` varchar(200) NOT NULL,
+  `eventTime` datetime NOT NULL,
+  `eventLocation` varchar(200) DEFAULT NULL,
+  `capacity` int DEFAULT NULL,
+  `host` varchar(7) NOT NULL,
+  `description` text,
+  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`eventId`),
+  UNIQUE KEY `eventCode` (`eventCode`),
+  KEY `host` (`host`),
+  CONSTRAINT `events_ibfk_1` FOREIGN KEY (`host`) REFERENCES `users` (`enum`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `studentclass` (
+  `enum` varchar(7) NOT NULL,
+  `classNo` int NOT NULL,
+  PRIMARY KEY (`enum`,`classNo`),
+  KEY `classNo` (`classNo`),
+  CONSTRAINT `studentclass_ibfk_1` FOREIGN KEY (`enum`) REFERENCES `users` (`enum`) ON DELETE CASCADE,
+  CONSTRAINT `studentclass_ibfk_2` FOREIGN KEY (`classNo`) REFERENCES `class` (`classNo`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `checkins` (
+  `checkInId` int NOT NULL AUTO_INCREMENT,
+  `eventId` int NOT NULL,
+  `enum` varchar(7) NOT NULL,
+  `checkedInAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`checkInId`),
+  UNIQUE KEY `event_enum_unique` (`eventId`,`enum`),
+  KEY `enum` (`enum`),
+  CONSTRAINT `checkins_ibfk_1` FOREIGN KEY (`eventId`) REFERENCES `events` (`eventId`) ON DELETE CASCADE,
+  CONSTRAINT `checkins_ibfk_2` FOREIGN KEY (`enum`) REFERENCES `users` (`enum`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+INSERT INTO `users`
+(`enum`, `fname`, `lname`, `email`, `password_hash`, `phoneNum`, `role`, `createdAt`)
+VALUES
+('e100000', 'Jordan', 'Reed', 'jordan.reed@attendanceapp.edu', '$2y$10$examplehashadmin000000000000000000000000000000000000000000', '555-0101', 'admin', '2026-04-01 08:00:00'),
+('e100001', 'Maya', 'Chen', 'maya.chen@attendanceapp.edu', '$2y$10$examplehashteacher10010000000000000000000000000000000000', '555-0102', 'teacher', '2026-04-01 08:05:00'),
+('e100002', 'Daniel', 'Brooks', 'daniel.brooks@attendanceapp.edu', '$2y$10$examplehashteacher1002000000000000000000000000000000000', '555-0103', 'teacher', '2026-04-01 08:10:00'),
+('e100003', 'Alicia', 'Patel', 'alicia.patel@attendanceapp.edu', '$2y$10$examplehashteacher1003000000000000000000000000000000000', '555-0104', 'teacher', '2026-04-01 08:15:00'),
+('e200001', 'Noah', 'Williams', 'noah.williams@student.edu', '$2y$10$examplehashstudent2001000000000000000000000000000000000', '555-0201', 'student', '2026-04-02 09:00:00'),
+('e200002', 'Emma', 'Garcia', 'emma.garcia@student.edu', '$2y$10$examplehashstudent20020000000000000000000000000000000000', '555-0202', 'student', '2026-04-02 09:05:00'),
+('e200003', 'Liam', 'Smith', 'liam.smith@student.edu', '$2y$10$examplehashstudent20030000000000000000000000000000000000', '555-0203', 'student', '2026-04-02 09:10:00'),
+('e200004', 'Olivia', 'Johnson', 'olivia.johnson@student.edu', '$2y$10$examplehashstudent200400000000000000000000000000000000', '555-0204', 'student', '2026-04-02 09:15:00'),
+('e200005', 'Ethan', 'Brown', 'ethan.brown@student.edu', '$2y$10$examplehashstudent2005000000000000000000000000000000000', '555-0205', 'student', '2026-04-02 09:20:00'),
+('e200006', 'Sophia', 'Davis', 'sophia.davis@student.edu', '$2y$10$examplehashstudent200600000000000000000000000000000000', '555-0206', 'student', '2026-04-02 09:25:00'),
+('e200007', 'Mason', 'Miller', 'mason.miller@student.edu', '$2y$10$examplehashstudent200700000000000000000000000000000000', '555-0207', 'student', '2026-04-02 09:30:00'),
+('e200008', 'Ava', 'Wilson', 'ava.wilson@student.edu', '$2y$10$examplehashstudent20080000000000000000000000000000000000', '555-0208', 'student', '2026-04-02 09:35:00'),
+('e200009', 'Lucas', 'Moore', 'lucas.moore@student.edu', '$2y$10$examplehashstudent2009000000000000000000000000000000000', '555-0209', 'student', '2026-04-02 09:40:00'),
+('e200010', 'Isabella', 'Taylor', 'isabella.taylor@student.edu', '$2y$10$examplehashstudent20100000000000000000000000000000000', '555-0210', 'student', '2026-04-02 09:45:00');
+
+INSERT INTO `class`
+(`classNo`, `className`, `teacher`, `createdAt`)
+VALUES
+(1, 'CS101 - Introduction to Programming', 'e100001', '2026-04-03 10:00:00'),
+(2, 'MATH201 - Applied Statistics', 'e100002', '2026-04-03 10:05:00'),
+(3, 'ENG150 - Academic Writing', 'e100003', '2026-04-03 10:10:00'),
+(4, 'CS220 - Database Systems', 'e100001', '2026-04-03 10:15:00'),
+(5, 'SCI110 - Environmental Science', 'e100002', '2026-04-03 10:20:00');
+
+INSERT INTO `events`
+(`eventId`, `eventCode`, `eventName`, `eventTime`, `eventLocation`, `capacity`, `host`, `description`, `createdAt`)
+VALUES
+(1, 'CS101-APR20', 'CS101 Lecture: Variables and Data Types', '2026-04-20 09:00:00', 'Room 101', 40, 'e100001', 'Regular lecture for CS101 students.', '2026-04-10 08:00:00'),
+(2, 'MATH201-APR20', 'MATH201 Lab: Probability Review', '2026-04-20 11:00:00', 'Statistics Lab', 30, 'e100002', 'Practice session covering probability rules.', '2026-04-10 08:10:00'),
+(3, 'ENG150-APR21', 'ENG150 Workshop: Thesis Statements', '2026-04-21 10:00:00', 'Writing Center', 25, 'e100003', 'Workshop for improving thesis statements.', '2026-04-10 08:20:00'),
+(4, 'CS220-APR22', 'CS220 Lecture: SQL Joins', '2026-04-22 13:00:00', 'Room 204', 35, 'e100001', 'Database lecture focused on inner and outer joins.', '2026-04-10 08:30:00'),
+(5, 'SCI110-APR23', 'SCI110 Field Briefing', '2026-04-23 14:00:00', 'Science Hall', 45, 'e100002', 'Briefing before the environmental field activity.', '2026-04-10 08:40:00'),
+(6, 'ORIENT-APR24', 'Student Attendance App Orientation', '2026-04-24 15:00:00', 'Auditorium', 100, 'e100000', 'General orientation on how to use the attendance system.', '2026-04-10 08:50:00');
+
+INSERT INTO `studentclass`
+(`enum`, `classNo`)
+VALUES
+('e200001', 1), ('e200001', 4),
+('e200002', 1), ('e200002', 2),
+('e200003', 1), ('e200003', 3),
+('e200004', 2), ('e200004', 3),
+('e200005', 2), ('e200005', 5),
+('e200006', 3), ('e200006', 5),
+('e200007', 4), ('e200007', 5),
+('e200008', 1), ('e200008', 4),
+('e200009', 2), ('e200009', 4),
+('e200010', 3), ('e200010', 5);
+
+INSERT INTO `checkins`
+(`checkInId`, `eventId`, `enum`, `checkedInAt`)
+VALUES
+(1, 1, 'e200001', '2026-04-20 08:55:00'),
+(2, 1, 'e200002', '2026-04-20 08:56:00'),
+(3, 1, 'e200003', '2026-04-20 08:58:00'),
+(4, 1, 'e200008', '2026-04-20 08:59:00'),
+(5, 2, 'e200002', '2026-04-20 10:52:00'),
+(6, 2, 'e200004', '2026-04-20 10:54:00'),
+(7, 2, 'e200005', '2026-04-20 10:57:00'),
+(8, 2, 'e200009', '2026-04-20 10:59:00'),
+(9, 3, 'e200003', '2026-04-21 09:51:00'),
+(10, 3, 'e200004', '2026-04-21 09:54:00'),
+(11, 3, 'e200006', '2026-04-21 09:56:00'),
+(12, 3, 'e200010', '2026-04-21 09:58:00'),
+(13, 4, 'e200001', '2026-04-22 12:52:00'),
+(14, 4, 'e200007', '2026-04-22 12:55:00'),
+(15, 4, 'e200008', '2026-04-22 12:57:00'),
+(16, 4, 'e200009', '2026-04-22 12:59:00'),
+(17, 5, 'e200005', '2026-04-23 13:50:00'),
+(18, 5, 'e200006', '2026-04-23 13:54:00'),
+(19, 5, 'e200007', '2026-04-23 13:56:00'),
+(20, 5, 'e200010', '2026-04-23 13:59:00'),
+(21, 6, 'e200001', '2026-04-24 14:45:00'),
+(22, 6, 'e200002', '2026-04-24 14:46:00'),
+(23, 6, 'e200003', '2026-04-24 14:47:00'),
+(24, 6, 'e200004', '2026-04-24 14:48:00'),
+(25, 6, 'e200005', '2026-04-24 14:49:00'),
+(26, 6, 'e200006', '2026-04-24 14:50:00'),
+(27, 6, 'e200007', '2026-04-24 14:51:00'),
+(28, 6, 'e200008', '2026-04-24 14:52:00'),
+(29, 6, 'e200009', '2026-04-24 14:53:00'),
+(30, 6, 'e200010', '2026-04-24 14:54:00');
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
