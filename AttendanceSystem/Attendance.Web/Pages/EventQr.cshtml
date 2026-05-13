@@ -1,0 +1,79 @@
+@page
+@model Attendance.Web.Pages.EventQrModel
+@{
+    ViewData["Title"] = "Print Event QR";
+}
+
+<section class="qr-page">
+    <div class="qr-toolbar">
+        <a asp-page="/Index">Back to events</a>
+        <button type="button" onclick="window.print()">Print QR</button>
+    </div>
+
+    <article class="qr-sheet">
+        <div>
+            <h1 id="eventName">Loading event...</h1>
+            <dl>
+                <div>
+                    <dt>Code</dt>
+                    <dd id="eventCode"></dd>
+                </div>
+                <div>
+                    <dt>Time</dt>
+                    <dd id="eventTime"></dd>
+                </div>
+                <div>
+                    <dt>Location</dt>
+                    <dd id="eventLocation"></dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="qr-frame">
+            <img id="qrImage" alt="Event QR code" />
+        </div>
+    </article>
+
+    <p id="qrStatus" class="status">Preparing QR code.</p>
+</section>
+
+@section Scripts {
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const eventId = params.get("eventId");
+        const statusBox = document.getElementById("qrStatus");
+
+        function apiBase() {
+            return window.location.protocol === "https:"
+                ? "https://localhost:7027/api"
+                : "http://localhost:5214/api";
+        }
+
+        async function loadQrPage() {
+            if (!eventId) {
+                statusBox.textContent = "Missing event id.";
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiBase()}/Event/${encodeURIComponent(eventId)}`);
+
+                if (!response.ok) {
+                    throw new Error("Event could not be loaded.");
+                }
+
+                const event = await response.json();
+                document.getElementById("eventName").textContent = event.eventName;
+                document.getElementById("eventCode").textContent = event.eventCode;
+                document.getElementById("eventTime").textContent = new Date(event.eventTime).toLocaleString();
+                document.getElementById("eventLocation").textContent = event.eventLocation ?? "";
+                document.getElementById("qrImage").src = `${apiBase()}/Event/${encodeURIComponent(event.eventId)}/qr`;
+                statusBox.textContent = "QR code ready to print.";
+            } catch (error) {
+                statusBox.textContent = error.message;
+            }
+        }
+
+        loadQrPage();
+    </script>
+}

@@ -4,43 +4,198 @@
     ViewData["Title"] = "Event Manager";
 }
 
-<section class="app-shell">
+<div id="loginOverlay" class="login-overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <form id="loginGate" class="login-card">
+        <div>
+            <h1 id="loginTitle">Teacher/Admin Access</h1>
+            <p id="loginPrompt">Enter your enum to continue.</p>
+        </div>
+        <label>
+            Enum
+            <input id="loginEnum" placeholder="e1000010" pattern="e[0-9]{7}" autocomplete="username" required />
+        </label>
+        <label id="loginPasswordRow" class="hidden">
+            Password
+            <input id="loginPassword" type="password" autocomplete="current-password" />
+        </label>
+        <div id="createPasswordPanel" class="password-setup hidden">
+            <label>
+                Create Password
+                <input id="newPassword" type="password" autocomplete="new-password" />
+            </label>
+            <label>
+                Confirm Password
+                <input id="confirmPassword" type="password" autocomplete="new-password" />
+            </label>
+            <div class="password-rules">
+                <strong>Password requirements</strong>
+                <span>At least 12 characters</span>
+                <span>At least 1 uppercase letter</span>
+                <span>At least 1 lowercase letter</span>
+                <span>At least 1 number</span>
+                <span>At least 1 symbol</span>
+            </div>
+        </div>
+        <div class="login-actions">
+            <button id="loginButton" type="submit">Continue</button>
+            <button id="loginBackButton" type="button" class="secondary hidden" onclick="resetLoginPrompt()">Back</button>
+        </div>
+        <p id="loginStatus" class="login-status">Only admin or teacher accounts can use the web app.</p>
+    </form>
+</div>
+
+<section id="appShell" class="app-shell locked">
     <div class="toolbar">
         <div>
             <h1>Event Manager</h1>
-            <p>Teacher/admin web console for creating, editing, and deleting attendance events.</p>
+            <p id="signedInUser">Locked until teacher/admin enum is verified.</p>
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="logout-button" onclick="logout()">Log Out</button>
         </div>
     </div>
 
-    <div class="work-grid">
-        <section class="panel">
-            <div class="panel-header">
-                <h2 id="formTitle">Add Event</h2>
-                <button type="button" onclick="resetEventForm()">New Event</button>
-            </div>
-            <form id="eventForm">
-                <input id="eventId" type="hidden" />
-                <input id="eventName" placeholder="Event name" required />
-                <input id="eventTime" type="datetime-local" required />
-                <input id="eventLocation" placeholder="Location" />
-                <input id="eventCapacity" type="number" min="1" placeholder="Capacity" />
-                <select id="eventHost" required>
-                    <option value="">Loading teachers/admins...</option>
-                </select>
-                <textarea id="eventDescription" placeholder="Description"></textarea>
-                <button type="submit">Save Event</button>
-            </form>
-        </section>
+    <nav class="tabs" aria-label="Event manager tabs">
+        <button id="createTabButton" type="button" class="active" onclick="showTab('create')">Create Event</button>
+        <button id="eventsTabButton" type="button" onclick="showTab('events')">Event List</button>
+        <button id="addUserTabButton" type="button" onclick="showTab('addUser')">Add Student</button>
+        <button id="studentsTabButton" type="button" onclick="showTab('students')">Student Info</button>
+    </nav>
 
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Events</h2>
-                <button type="button" onclick="loadEvents()">Refresh</button>
+    <section id="createTab" class="panel tab-panel active">
+        <div class="panel-header">
+            <div>
+                <h2 id="formTitle">Create Event</h2>
+                <p id="formHint">Leave code, QR, class, and host empty. The backend handles them.</p>
             </div>
-            <div id="eventCount" class="status">0 events loaded.</div>
-            <div id="eventsTable" class="table-wrap"></div>
-        </section>
-    </div>
+            <button type="button" onclick="resetEventForm()">Clear Form</button>
+        </div>
+
+        <form id="eventForm">
+            <input id="eventId" type="hidden" />
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <th><label for="eventName">Event Name</label></th>
+                        <td><input id="eventName" placeholder="Student Attendance App Orientation" required /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="eventTime">Date And Time</label></th>
+                        <td><input id="eventTime" type="datetime-local" required /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="eventLocation">Location</label></th>
+                        <td><input id="eventLocation" placeholder="Auditorium" /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="eventCapacity">Capacity</label></th>
+                        <td><input id="eventCapacity" type="number" min="1" placeholder="100" /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="eventDescription">Description</label></th>
+                        <td><textarea id="eventDescription" placeholder="General orientation for all students."></textarea></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="form-actions">
+                <button id="saveButton" type="submit">Create Event</button>
+                <button type="button" class="secondary" onclick="resetEventForm()">Cancel</button>
+            </div>
+        </form>
+    </section>
+
+    <section id="eventsTab" class="panel tab-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Event List</h2>
+                <p id="eventCount">0 events loaded.</p>
+            </div>
+            <button type="button" onclick="loadEvents()">Refresh Events</button>
+        </div>
+
+        <div class="filter-grid one-filter">
+            <label>
+                Event
+                <select id="eventFilter" onchange="renderEvents()">
+                    <option value="">All events</option>
+                </select>
+            </label>
+        </div>
+
+        <div id="eventsTable" class="table-wrap"></div>
+    </section>
+
+    <section id="addUserTab" class="panel tab-panel">
+        <div class="panel-header">
+            <div>
+                <h2 id="userFormTitle">Add Student</h2>
+                <p id="userFormHint">Create a new user in the database.</p>
+            </div>
+        </div>
+
+        <form id="userForm">
+            <input id="userMode" type="hidden" />
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <th><label for="userEnum">Enum</label></th>
+                        <td><input id="userEnum" placeholder="e2000110" pattern="e[0-9]{7}" required /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="fname">First Name</label></th>
+                        <td><input id="fname" required /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="lname">Last Name</label></th>
+                        <td><input id="lname" required /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="email">Email</label></th>
+                        <td><input id="email" type="email" required /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="phoneNum">Phone Number</label></th>
+                        <td><input id="phoneNum" /></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="form-actions">
+                <button id="userSaveButton" type="submit">Add User</button>
+                <button type="button" class="secondary" onclick="resetUserForm()">Cancel</button>
+            </div>
+        </form>
+    </section>
+
+    <section id="studentsTab" class="panel tab-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Student Info</h2>
+                <p id="reportSummary">Students need 3 events per semester.</p>
+            </div>
+            <div class="panel-actions">
+                <button type="button" onclick="showTab('addUser')">Add Student</button>
+                <button type="button" onclick="loadAttendanceReport()">Refresh Students</button>
+            </div>
+        </div>
+
+        <div class="filter-grid">
+            <label>
+                Student Status
+                <select id="statusFilter" onchange="loadAttendanceReport()">
+                    <option value="all">All students</option>
+                    <option value="complete">Done attending</option>
+                    <option value="needs">Still need events</option>
+                </select>
+            </label>
+            <label>
+                Student Search
+                <input id="studentFilter" placeholder="Name, email, or enum" oninput="renderAttendanceReport()" />
+            </label>
+        </div>
+        <div id="attendanceReport" class="table-wrap"></div>
+    </section>
 
     <div id="status" class="status">Ready.</div>
 </section>
@@ -48,12 +203,29 @@
 @section Scripts {
     <script>
         const eventForm = document.getElementById("eventForm");
+        const loginGate = document.getElementById("loginGate");
+        const userForm = document.getElementById("userForm");
         const eventsTable = document.getElementById("eventsTable");
+        const attendanceReport = document.getElementById("attendanceReport");
         const statusBox = document.getElementById("status");
+        const loginStatus = document.getElementById("loginStatus");
+        const loginOverlay = document.getElementById("loginOverlay");
+        const appShell = document.getElementById("appShell");
+        const signedInUser = document.getElementById("signedInUser");
+        const loginPrompt = document.getElementById("loginPrompt");
+        const loginPasswordRow = document.getElementById("loginPasswordRow");
+        const createPasswordPanel = document.getElementById("createPasswordPanel");
+        const loginBackButton = document.getElementById("loginBackButton");
+        const loginButton = document.getElementById("loginButton");
         let events = [];
-        let hosts = [];
+        let currentReport = null;
+        let currentWebUser = null;
+        let loginMode = "enum";
+        let pendingLoginEnum = "";
 
+        loginGate.addEventListener("submit", login);
         eventForm.addEventListener("submit", saveEvent);
+        userForm.addEventListener("submit", saveUser);
 
         function apiBase() {
             return window.location.protocol === "https:"
@@ -70,8 +242,9 @@
                     ...options
                 });
             } catch {
-                throw new Error(`Could not reach ${apiBase()}. Make sure the API is running and that the Web page and API are both using http or both using https.`);
+                throw new Error(`Could not reach ${apiBase()}. Make sure the API is running.`);
             }
+
             const text = await response.text();
             const contentType = response.headers.get("content-type") ?? "";
             const data = text && contentType.includes("application/json")
@@ -85,17 +258,193 @@
             return data;
         }
 
+        function showTab(name) {
+            document.getElementById("createTab").classList.toggle("active", name === "create");
+            document.getElementById("eventsTab").classList.toggle("active", name === "events");
+            document.getElementById("addUserTab").classList.toggle("active", name === "addUser");
+            document.getElementById("studentsTab").classList.toggle("active", name === "students");
+            document.getElementById("createTabButton").classList.toggle("active", name === "create");
+            document.getElementById("eventsTabButton").classList.toggle("active", name === "events");
+            document.getElementById("addUserTabButton").classList.toggle("active", name === "addUser");
+            document.getElementById("studentsTabButton").classList.toggle("active", name === "students");
+        }
+
         function setStatus(message) {
             statusBox.textContent = message;
+        }
+
+        async function login(event) {
+            event.preventDefault();
+
+            if (loginMode === "password") {
+                await loginWithPassword();
+                return;
+            }
+
+            if (loginMode === "setup") {
+                await createPassword();
+                return;
+            }
+
+            await checkEnumForLogin();
+        }
+
+        async function checkEnumForLogin() {
+            const enumValue = document.getElementById("loginEnum").value.trim().toLowerCase();
+            loginStatus.textContent = "Checking account...";
+
+            try {
+                const status = await request(`/User/${encodeURIComponent(enumValue)}/web-login-status`);
+
+                if (!status.canUseWebApp) {
+                    loginStatus.textContent = "Access denied. This enum is not a teacher or admin account.";
+                    return;
+                }
+
+                pendingLoginEnum = status.enum;
+                document.getElementById("loginEnum").value = status.enum;
+                document.getElementById("loginEnum").readOnly = true;
+
+                if (status.requiresPasswordSetup) {
+                    showPasswordSetup(status);
+                    return;
+                }
+
+                showPasswordLogin(status);
+            } catch (error) {
+                loginStatus.textContent = `Login failed: ${error.message}`;
+            }
+        }
+
+        function showPasswordLogin(status) {
+            loginMode = "password";
+            loginPrompt.textContent = `Enter the password for ${status.fname} ${status.lname}.`;
+            loginPasswordRow.classList.remove("hidden");
+            createPasswordPanel.classList.add("hidden");
+            loginBackButton.classList.remove("hidden");
+            loginButton.textContent = "Log In";
+            loginStatus.textContent = "Password found. Please log in.";
+            document.getElementById("loginPassword").required = true;
+            document.getElementById("newPassword").required = false;
+            document.getElementById("confirmPassword").required = false;
+            document.getElementById("loginPassword").focus();
+        }
+
+        function showPasswordSetup(status) {
+            loginMode = "setup";
+            loginPrompt.textContent = `${status.fname} ${status.lname} needs to create a password.`;
+            loginPasswordRow.classList.add("hidden");
+            createPasswordPanel.classList.remove("hidden");
+            loginBackButton.classList.remove("hidden");
+            loginButton.textContent = "Create Password";
+            loginStatus.textContent = "Create a password before logging in.";
+            document.getElementById("loginPassword").required = false;
+            document.getElementById("newPassword").required = true;
+            document.getElementById("confirmPassword").required = true;
+            document.getElementById("newPassword").focus();
+        }
+
+        async function loginWithPassword() {
+            const password = document.getElementById("loginPassword").value;
+
+            try {
+                loginStatus.textContent = "Logging in...";
+                const user = await request("/User/login/enum", {
+                    method: "POST",
+                    body: JSON.stringify({ enum: pendingLoginEnum, password })
+                });
+
+                unlockApp(user);
+                await loadEvents();
+                await loadAttendanceReport();
+                setStatus(`Signed in as ${user.fname} ${user.lname}.`);
+            } catch (error) {
+                loginStatus.textContent = `Login failed: ${error.message}`;
+            }
+        }
+
+        async function createPassword() {
+            const password = document.getElementById("newPassword").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (password !== confirmPassword) {
+                loginStatus.textContent = "Passwords do not match.";
+                return;
+            }
+
+            const passwordError = validatePassword(password);
+
+            if (passwordError) {
+                loginStatus.textContent = `Please pass all password requirements. ${passwordError}`;
+                return;
+            }
+
+            try {
+                loginStatus.textContent = "Creating password...";
+                const createdPasswordEnum = pendingLoginEnum;
+                await request(`/User/${encodeURIComponent(pendingLoginEnum)}/password`, {
+                    method: "POST",
+                    body: JSON.stringify({ password })
+                });
+
+                resetLoginPrompt();
+                document.getElementById("loginEnum").value = createdPasswordEnum;
+                loginStatus.textContent = "Password created. Press Continue, then enter your password to log in.";
+            } catch (error) {
+                loginStatus.textContent = `Password setup failed: ${error.message}`;
+            }
+        }
+
+        function validatePassword(password) {
+            if (password.length < 12) return "Password must be at least 12 characters.";
+            if (!/[A-Z]/.test(password)) return "Password must include at least 1 uppercase letter.";
+            if (!/[a-z]/.test(password)) return "Password must include at least 1 lowercase letter.";
+            if (!/[0-9]/.test(password)) return "Password must include at least 1 number.";
+            if (!/[^a-zA-Z0-9]/.test(password)) return "Password must include at least 1 symbol.";
+            return "";
+        }
+
+        function unlockApp(user) {
+            currentWebUser = user;
+            loginOverlay.classList.add("hidden");
+            appShell.classList.remove("locked");
+            signedInUser.textContent = `${user.fname} ${user.lname} (${user.enum}) - ${user.role}`;
+        }
+
+        function logout() {
+            currentWebUser = null;
+            resetLoginPrompt();
+            signedInUser.textContent = "Locked until teacher/admin enum is verified.";
+            appShell.classList.add("locked");
+            loginOverlay.classList.remove("hidden");
+            document.getElementById("loginEnum").focus();
+        }
+
+        async function restoreLogin() {
+            resetLoginPrompt();
+            document.getElementById("loginEnum").focus();
+        }
+
+        function resetLoginPrompt() {
+            loginMode = "enum";
+            pendingLoginEnum = "";
+            loginGate.reset();
+            document.getElementById("loginEnum").readOnly = false;
+            loginPrompt.textContent = "Enter your enum to continue.";
+            loginPasswordRow.classList.add("hidden");
+            createPasswordPanel.classList.add("hidden");
+            loginBackButton.classList.add("hidden");
+            loginButton.textContent = "Continue";
+            loginStatus.textContent = "Only admin or teacher accounts can use the web app.";
+            document.getElementById("loginPassword").required = false;
+            document.getElementById("newPassword").required = false;
+            document.getElementById("confirmPassword").required = false;
         }
 
         async function saveEvent(event) {
             event.preventDefault();
 
-            if (!document.getElementById("eventHost").value) {
-                setStatus("Choose a teacher/admin host before saving.");
-                return;
-            }
+            if (!canUseWebApp()) return;
 
             const eventId = document.getElementById("eventId").value;
             const payload = {
@@ -104,21 +453,31 @@
                 eventTime: document.getElementById("eventTime").value,
                 eventLocation: document.getElementById("eventLocation").value.trim(),
                 capacity: Number(document.getElementById("eventCapacity").value) || null,
-                host: document.getElementById("eventHost").value,
+                host: "",
                 description: document.getElementById("eventDescription").value.trim()
             };
 
             try {
-                setStatus(eventId ? "Updating event..." : "Adding event and generating hidden QR code...");
+                setStatus(eventId ? "Updating event..." : "Creating event and QR code...");
                 const saved = await request(eventId ? `/Event/${eventId}` : "/Event", {
                     method: eventId ? "PUT" : "POST",
                     body: JSON.stringify(payload)
                 });
 
-                const highlightedEventId = saved?.eventId ?? Number(eventId);
+                const savedEventId = saved?.eventId ?? Number(eventId);
+                const savedEventCode = saved?.eventCode ?? events.find(item => item.eventId === savedEventId)?.eventCode;
+
                 resetEventForm();
-                await loadEvents(highlightedEventId);
-                setStatus(eventId ? "Event updated." : `Event ${saved.eventCode} added. Unique QR code was generated in the backend.`);
+                await loadEvents(savedEventId);
+                showTab("events");
+
+                if (!eventId && savedEventId) {
+                    window.open(`/EventQr?eventId=${encodeURIComponent(savedEventId)}`, "_blank", "noopener");
+                }
+
+                setStatus(eventId
+                    ? "Event updated and saved to the database."
+                    : `Event ${savedEventCode} created. QR print page opened in a new tab.`);
             } catch (error) {
                 setStatus(`Save failed: ${error.message}`);
             }
@@ -128,6 +487,7 @@
             try {
                 events = await request("/Event");
                 document.getElementById("eventCount").textContent = `${events.length} events loaded.`;
+                renderEventFilter();
                 renderEvents(highlightId);
             } catch (error) {
                 eventsTable.innerHTML = `<div class="empty">Could not load events.</div>`;
@@ -135,33 +495,44 @@
             }
         }
 
-        async function loadHosts() {
+        function renderEventFilter() {
+            const selectedEventId = document.getElementById("eventFilter").value;
+            const eventFilter = document.getElementById("eventFilter");
+            eventFilter.innerHTML = `
+                <option value="">All events</option>
+                ${events
+                    .sort((a, b) => new Date(b.eventTime) - new Date(a.eventTime))
+                    .map(evt => `<option value="${evt.eventId}">${escapeHtml(evt.eventCode)} - ${escapeHtml(evt.eventName)}</option>`)
+                    .join("")}`;
+            eventFilter.value = selectedEventId;
+        }
+
+        async function loadAttendanceReport() {
+            const status = document.getElementById("statusFilter").value;
+            const query = new URLSearchParams();
+
+            if (status) query.set("status", status);
+
             try {
-                const users = await request("/User");
-                hosts = users.filter(user => user.role === "admin" || user.role === "teacher");
-                const hostSelect = document.getElementById("eventHost");
-
-                if (!hosts.length) {
-                    hostSelect.innerHTML = `<option value="">No teacher/admin users found</option>`;
-                    setStatus("No teacher/admin users were found. Load the database seed script before adding events.");
-                    return;
-                }
-
-                hostSelect.innerHTML = `
-                    <option value="">Choose teacher/admin host</option>
-                    ${hosts.map(user => `
-                        <option value="${escapeHtml(user.enum)}">
-                            ${escapeHtml(user.enum)} - ${escapeHtml(user.fname)} ${escapeHtml(user.lname)} (${escapeHtml(user.role)})
-                        </option>
-                    `).join("")}`;
+                const report = await request(`/AttendanceReport/student-progress?${query.toString()}`);
+                currentReport = report;
+                renderAttendanceReport(report);
             } catch (error) {
-                document.getElementById("eventHost").innerHTML = `<option value="">Could not load hosts</option>`;
-                setStatus(`Could not load teacher/admin users: ${error.message}`);
+                attendanceReport.innerHTML = `<div class="empty">Could not load attendance report.</div>`;
+                setStatus(`Report failed: ${error.message}`);
             }
         }
 
         function renderEvents(highlightId) {
-            if (!events.length) {
+            const selectedEventId = Number(document.getElementById("eventFilter").value) || null;
+            const visibleEvents = selectedEventId
+                ? events.filter(evt => evt.eventId === selectedEventId)
+                : events;
+
+            document.getElementById("eventCount").textContent =
+                selectedEventId ? `${visibleEvents.length} event shown.` : `${visibleEvents.length} events loaded.`;
+
+            if (!visibleEvents.length) {
                 eventsTable.innerHTML = `<div class="empty">No events yet.</div>`;
                 return;
             }
@@ -175,12 +546,12 @@
                             <th>Event</th>
                             <th>Time</th>
                             <th>Location</th>
-                            <th>Host</th>
                             <th>Capacity</th>
+                            <th>QR</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${events
+                        ${visibleEvents
                             .sort((a, b) => new Date(b.eventTime) - new Date(a.eventTime))
                             .map(evt => `
                                 <tr class="${evt.eventId === highlightId ? "highlight" : ""}">
@@ -192,15 +563,170 @@
                                     <td>${escapeHtml(evt.eventName)}</td>
                                     <td>${escapeHtml(new Date(evt.eventTime).toLocaleString())}</td>
                                     <td>${escapeHtml(evt.eventLocation ?? "")}</td>
-                                    <td>${escapeHtml(evt.host)}</td>
                                     <td>${escapeHtml(evt.capacity ?? "")}</td>
+                                    <td><button type="button" class="secondary compact" onclick="openQr(${evt.eventId})">Print QR</button></td>
                                 </tr>
                             `).join("")}
                     </tbody>
                 </table>`;
         }
 
+        function renderAttendanceReport(report = currentReport) {
+            if (!report) {
+                attendanceReport.innerHTML = `<div class="empty">Student attendance has not loaded yet.</div>`;
+                return;
+            }
+
+            const search = document.getElementById("studentFilter").value.trim().toLowerCase();
+            const visibleStudents = search
+                ? report.students.filter(student =>
+                    student.studentEnum.toLowerCase().includes(search)
+                    || student.email.toLowerCase().includes(search)
+                    || `${student.fname} ${student.lname}`.toLowerCase().includes(search))
+                : report.students;
+
+            document.getElementById("reportSummary").textContent =
+                `${visibleStudents.filter(student => student.isComplete).length} done, ${visibleStudents.filter(student => !student.isComplete).length} still need events. Requirement: ${report.requiredEventsPerSemester} events per semester.`;
+
+            if (!visibleStudents.length) {
+                attendanceReport.innerHTML = `<div class="empty">No students match the selected filters.</div>`;
+                return;
+            }
+
+            attendanceReport.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Actions</th>
+                            <th>Student</th>
+                            <th>Enum</th>
+                            <th>Attended</th>
+                            <th>Remaining</th>
+                            <th>Check-In Times</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${visibleStudents.map(student => `
+                            <tr>
+                                <td><span class="badge ${student.isComplete ? "complete" : "needs"}">${student.isComplete ? "Done" : "Needs"}</span></td>
+                                <td class="actions">
+                                    <button type="button" onclick="editStudent('${escapeJs(student.studentEnum)}')">Edit</button>
+                                    <button type="button" class="danger" onclick="deleteStudent('${escapeJs(student.studentEnum)}')">Delete</button>
+                                </td>
+                                <td>${escapeHtml(student.fname)} ${escapeHtml(student.lname)}</td>
+                                <td>${escapeHtml(student.studentEnum)}</td>
+                                <td>${student.attendedCount} / ${student.requiredCount}</td>
+                                <td>${student.remainingCount}</td>
+                                <td>${renderCheckinHistory(student.checkins)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>`;
+        }
+
+        function renderCheckinHistory(checkins) {
+            if (!checkins?.length) {
+                return `<span class="muted">No check-ins</span>`;
+            }
+
+            return `
+                <ul class="checkin-list">
+                    ${checkins.map(checkin => `
+                        <li>
+                            <strong>${escapeHtml(checkin.eventCode)}</strong>
+                            <span>${escapeHtml(checkin.eventName)}</span>
+                            <time>${escapeHtml(checkin.checkedInAt ? new Date(checkin.checkedInAt).toLocaleString() : "")}</time>
+                        </li>
+                    `).join("")}
+                </ul>`;
+        }
+
+        async function saveUser(event) {
+            event.preventDefault();
+
+            if (!canUseWebApp()) return;
+
+            const userEnum = document.getElementById("userEnum").value.trim().toLowerCase();
+            const isEdit = document.getElementById("userMode").value === "edit";
+            const payload = {
+                enum: userEnum,
+                fname: document.getElementById("fname").value.trim(),
+                lname: document.getElementById("lname").value.trim(),
+                email: document.getElementById("email").value.trim(),
+                phoneNum: document.getElementById("phoneNum").value.trim() || null,
+                role: "Student"
+            };
+
+            try {
+                setStatus(isEdit ? `Updating ${userEnum}...` : "Adding user...");
+                await request(isEdit ? `/User/${encodeURIComponent(userEnum)}` : "/User", {
+                    method: isEdit ? "PUT" : "POST",
+                    body: JSON.stringify(payload)
+                });
+
+                resetUserForm();
+                await loadAttendanceReport();
+                showTab("students");
+                setStatus(isEdit ? `${userEnum} updated.` : "User successfully added to the database.");
+            } catch (error) {
+                setStatus(`User creation failed: ${error.message}`);
+            }
+        }
+
+        function editStudent(studentEnum) {
+            const student = currentReport?.students.find(item => item.studentEnum === studentEnum);
+
+            if (!student) {
+                setStatus("Student not found.");
+                return;
+            }
+
+            document.getElementById("userMode").value = "edit";
+            document.getElementById("userEnum").value = student.studentEnum;
+            document.getElementById("userEnum").readOnly = true;
+            document.getElementById("fname").value = student.fname;
+            document.getElementById("lname").value = student.lname;
+            document.getElementById("email").value = student.email;
+            document.getElementById("phoneNum").value = student.phoneNum ?? "";
+            document.getElementById("userFormTitle").textContent = "Edit Student/User";
+            document.getElementById("userFormHint").textContent = `Editing ${student.studentEnum}. Attendance progress cannot be edited here.`;
+            document.getElementById("userSaveButton").textContent = "Update User";
+            showTab("addUser");
+            setStatus(`Editing ${student.studentEnum}. Attendance count is read-only.`);
+            document.getElementById("fname").focus();
+        }
+
+        async function deleteStudent(studentEnum) {
+            if (!canUseWebApp()) return;
+
+            if (!confirm(`Delete student ${studentEnum}? This removes the student record, not individual attendance counts.`)) {
+                return;
+            }
+
+            try {
+                setStatus(`Deleting ${studentEnum}...`);
+                await request(`/User/${encodeURIComponent(studentEnum)}`, { method: "DELETE" });
+                resetUserForm();
+                await loadAttendanceReport();
+                setStatus(`${studentEnum} deleted.`);
+            } catch (error) {
+                setStatus(`Student delete failed: ${error.message}`);
+            }
+        }
+
+        function resetUserForm() {
+            userForm.reset();
+            document.getElementById("userMode").value = "";
+            document.getElementById("userEnum").readOnly = false;
+            document.getElementById("userFormTitle").textContent = "Add Student/User";
+            document.getElementById("userFormHint").textContent = "Create a new user in the database.";
+            document.getElementById("userSaveButton").textContent = "Add User";
+        }
+
         function editEvent(eventId) {
+            if (!canUseWebApp()) return;
+
             const evt = events.find(item => item.eventId === eventId);
 
             if (!evt) {
@@ -209,18 +735,22 @@
             }
 
             document.getElementById("formTitle").textContent = "Edit Event";
+            document.getElementById("formHint").textContent = `Editing ${evt.eventCode}. The same fields are used as the create table.`;
+            document.getElementById("saveButton").textContent = "Update Event";
             document.getElementById("eventId").value = evt.eventId;
             document.getElementById("eventName").value = evt.eventName;
             document.getElementById("eventTime").value = toDateTimeLocal(evt.eventTime);
             document.getElementById("eventLocation").value = evt.eventLocation ?? "";
             document.getElementById("eventCapacity").value = evt.capacity ?? "";
-            document.getElementById("eventHost").value = evt.host;
             document.getElementById("eventDescription").value = evt.description ?? "";
+            showTab("create");
             setStatus(`Editing ${evt.eventCode}.`);
             document.getElementById("eventName").focus();
         }
 
         async function deleteEvent(eventId) {
+            if (!canUseWebApp()) return;
+
             const evt = events.find(item => item.eventId === eventId);
             const label = evt ? evt.eventCode : `event ${eventId}`;
 
@@ -233,16 +763,36 @@
                 await request(`/Event/${eventId}`, { method: "DELETE" });
                 resetEventForm();
                 await loadEvents();
-                setStatus(`${label} deleted.`);
+                setStatus(`${label} deleted from the database.`);
             } catch (error) {
                 setStatus(`Delete failed: ${error.message}`);
             }
         }
 
+        function openQr(eventId) {
+            if (!canUseWebApp()) return;
+
+            window.open(`/EventQr?eventId=${encodeURIComponent(eventId)}`, "_blank", "noopener");
+        }
+
+        function canUseWebApp() {
+            if (currentWebUser) {
+                return true;
+            }
+
+            setStatus("Teacher/admin access is required.");
+            loginOverlay.classList.remove("hidden");
+            appShell.classList.add("locked");
+            document.getElementById("loginEnum").focus();
+            return false;
+        }
+
         function resetEventForm() {
             eventForm.reset();
             document.getElementById("eventId").value = "";
-            document.getElementById("formTitle").textContent = "Add Event";
+            document.getElementById("formTitle").textContent = "Create Event";
+            document.getElementById("formHint").textContent = "Leave code, QR, class, and host empty. The backend handles them.";
+            document.getElementById("saveButton").textContent = "Create Event";
         }
 
         function toDateTimeLocal(value) {
@@ -261,7 +811,10 @@
             }[char]));
         }
 
-        loadHosts();
-        loadEvents();
+        function escapeJs(value) {
+            return String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        }
+
+        restoreLogin();
     </script>
 }
