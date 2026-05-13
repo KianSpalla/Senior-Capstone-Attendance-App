@@ -1,7 +1,7 @@
 using Attendance.Api.Models;
 using Attendance.Api.Queries;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using BC = BCrypt.Net.BCrypt;
 
 namespace Attendance.Api.Services;
 
@@ -146,15 +146,7 @@ public class UserService : IUserService
 
     private static string HashPassword(string password)
     {
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
-            password,
-            salt,
-            100_000,
-            HashAlgorithmName.SHA256,
-            32);
-
-        return $"PBKDF2${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
+        return BC.HashPassword(password, BC.GenerateSalt(12));
     }
 
     private static bool VerifyPassword(string password, string storedPassword)
@@ -164,23 +156,12 @@ public class UserService : IUserService
             return password == storedPassword;
         }
 
-        var parts = storedPassword.Split('$');
-        var salt = Convert.FromBase64String(parts[1]);
-        var expectedHash = Convert.FromBase64String(parts[2]);
-        var actualHash = Rfc2898DeriveBytes.Pbkdf2(
-            password,
-            salt,
-            100_000,
-            HashAlgorithmName.SHA256,
-            32);
-
-        return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        return BC.Verify(password, storedPassword);
     }
 
     private static bool IsHashedPassword(string password)
     {
-        return password.StartsWith("PBKDF2$", StringComparison.Ordinal)
-            && password.Split('$').Length == 3;
+        return password.StartsWith("$2", StringComparison.Ordinal);
     }
 
     private static bool NeedsPasswordSetup(string password)
