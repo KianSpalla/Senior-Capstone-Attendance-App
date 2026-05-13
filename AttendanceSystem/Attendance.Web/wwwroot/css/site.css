@@ -105,7 +105,7 @@ body {
 .login-card button {
   border: 0;
   border-radius: 6px;
-  background: #0f766e;
+  background: rgb(35, 55, 105);
   color: #ffffff;
   font-weight: 700;
   padding: .75rem .9rem;
@@ -193,8 +193,8 @@ body {
 }
 
 .tabs button.active {
-  background: #0f766e;
-  border-color: #0f766e;
+  background: rgb(35, 55, 105);
+  border-color: rgb(35, 55, 105);
   color: #ffffff;
 }
 
@@ -253,7 +253,7 @@ body {
 .panel button {
   border: 0;
   border-radius: 6px;
-  background: #0f766e;
+  background: rgb(35, 55, 105);
   color: #ffffff;
   font-weight: 700;
   padding: .7rem .85rem;
@@ -372,7 +372,7 @@ body {
   height: 2rem;
   border-radius: 999px;
   background: #e6fffb;
-  color: #0f766e;
+  color: rgb(35, 55, 105);
   font-weight: 700;
 }
 
@@ -460,7 +460,7 @@ body {
 
 .badge.complete {
   background: #dcfae6;
-  color: #067647;
+  color: rgb(35, 55, 105);
 }
 
 .badge.needs {
@@ -506,7 +506,7 @@ body {
 .qr-toolbar button {
   border: 0;
   border-radius: 6px;
-  background: #0f766e;
+  background: rgb(35, 55, 105);
   color: #ffffff;
   font-weight: 700;
   padding: .7rem .85rem;
