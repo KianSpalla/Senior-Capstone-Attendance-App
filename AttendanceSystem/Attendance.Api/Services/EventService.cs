@@ -151,7 +151,7 @@ public class EventService : IEventService
         if (evt.capacity is <= 0)
             return EventSaveStatus.Invalid;
 
-        evt.host = evt.host.Trim().ToLowerInvariant();
+        evt.host = await ResolveHostAsync(evt.host);
         var host = await _userRepo.GetByEnumAsync(evt.host);
 
         if (host is null)
@@ -161,6 +161,20 @@ public class EventService : IEventService
             return EventSaveStatus.HostNotAllowed;
 
         return EventSaveStatus.Success;
+    }
+
+    private async Task<string> ResolveHostAsync(string? host)
+    {
+        if (!string.IsNullOrWhiteSpace(host))
+            return host.Trim().ToLowerInvariant();
+
+        var users = await _userRepo.GetAllAsync();
+        return users
+            .Where(user => user.Role is UserRole.admin or UserRole.teacher)
+            .OrderBy(user => user.Role is UserRole.admin ? 0 : 1)
+            .ThenBy(user => user.Enum)
+            .Select(user => user.Enum)
+            .FirstOrDefault() ?? string.Empty;
     }
 
     private async Task<string> GenerateEventCodeAsync()
