@@ -12,7 +12,7 @@ public class EventQrCodeService : IEventQrCodeService
 {
     public string GetPayload(string eventCode)
     {
-        return $"/api/Checkin/code/{Uri.EscapeDataString(eventCode.Trim().ToUpperInvariant())}";
+        return eventCode.Trim().ToUpperInvariant();
     }
 
     public string GenerateSvg(string eventCode)

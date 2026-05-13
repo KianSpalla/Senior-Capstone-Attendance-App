@@ -47,6 +47,7 @@ builder.Services.AddScoped<IClassService, ClassService>();
 
 builder.Services.AddScoped<ICheckinRepository, CheckinRepository>();
 builder.Services.AddScoped<ICheckInService, CheckInService>();
+builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

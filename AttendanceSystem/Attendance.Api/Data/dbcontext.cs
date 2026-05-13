@@ -21,7 +21,7 @@ public class AttendanceDbContext : DbContext
             entity.ToTable("users");
             entity.HasKey(u => u.Enum);
 
-            entity.Property(u => u.Enum).HasColumnName("enum").HasMaxLength(7);
+            entity.Property(u => u.Enum).HasColumnName("enum").HasMaxLength(8);
             entity.Property(u => u.fname).HasColumnName("fname").HasMaxLength(100);
             entity.Property(u => u.lname).HasColumnName("lname").HasMaxLength(100);
             entity.Property(u => u.email).HasColumnName("email").HasMaxLength(150);
@@ -43,7 +43,7 @@ public class AttendanceDbContext : DbContext
 
             entity.Property(c => c.classNo).HasColumnName("classNo");
             entity.Property(c => c.className).HasColumnName("className").HasMaxLength(150);
-            entity.Property(c => c.teacher).HasColumnName("teacher").HasMaxLength(7);
+            entity.Property(c => c.teacher).HasColumnName("teacher").HasMaxLength(8);
             entity.Property(c => c.createdAt).HasColumnName("createdAt");
 
             entity.HasOne(c => c.TeacherUser)
@@ -63,7 +63,7 @@ public class AttendanceDbContext : DbContext
             entity.Property(e => e.eventTime).HasColumnName("eventTime");
             entity.Property(e => e.eventLocation).HasColumnName("eventLocation").HasMaxLength(200);
             entity.Property(e => e.capacity).HasColumnName("capacity");
-            entity.Property(e => e.host).HasColumnName("host").HasMaxLength(7);
+            entity.Property(e => e.host).HasColumnName("host").HasMaxLength(8);
             entity.Property(e => e.description).HasColumnName("description");
             entity.Property(e => e.createdAt).HasColumnName("createdAt");
 
@@ -80,7 +80,7 @@ public class AttendanceDbContext : DbContext
             entity.ToTable("studentclass");
             entity.HasKey(sc => new { sc.Enum, sc.classNo });
 
-            entity.Property(sc => sc.Enum).HasColumnName("enum").HasMaxLength(7);
+            entity.Property(sc => sc.Enum).HasColumnName("enum").HasMaxLength(8);
             entity.Property(sc => sc.classNo).HasColumnName("classNo");
 
             entity.HasOne(sc => sc.User)
@@ -101,7 +101,7 @@ public class AttendanceDbContext : DbContext
 
             entity.Property(c => c.checkInId).HasColumnName("checkInId");
             entity.Property(c => c.eventId).HasColumnName("eventId");
-            entity.Property(c => c.Enum).HasColumnName("enum").HasMaxLength(7);
+            entity.Property(c => c.Enum).HasColumnName("enum").HasMaxLength(8);
             entity.Property(c => c.checkedInAt).HasColumnName("checkedInAt");
 
             entity.HasIndex(c => new { c.eventId, c.Enum }).IsUnique();
